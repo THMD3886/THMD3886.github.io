@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>賀卡編輯器</title>
+    <style>
+        body {
+            font-family: "Fahkwang Bold ", Palatino;
+            margin: 0;
+            padding: 20px;
+            background-color: #00a3ad;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #FFFFFF;
+        }
+
+        .editor-section {
+            display: flex;
+            gap: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .controls {
+            flex: 0 0 300px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .preview {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            background: #fff;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: auto;
+        }
+
+        canvas {
+            max-width: 100%;
+            height: auto;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: bold;
+        }
+
+        input[type="file"],
+        input[type="text"],
+        input[type="number"],
+        input[type="range"],
+        select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 5px;
+        }
+
+        input[type="color"] {
+            width: 100%;
+            height: 40px;
+            padding: 2px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .btn {
+            background: #004c97;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            background: #45a049;
+        }
+
+        .tab-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background: #ddd;
+        }
+
+        .tab-button.active {
+            background: #004c97;
+            color: white;
+        }
+
+        .position-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .position-controls > div {
+            flex: 1;
+        }
+
+        #senderImagePreview {
+            max-width: 100%;
+            height: auto;
+            margin-top: 10px;
+            border-radius: 4px;
+        }
+
+        .slider-group {
+            margin-bottom: 15px;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .slider-container input[type="range"] {
+            flex: 1;
+        }
+
+        .slider-value {
+            min-width: 50px;
+            text-align: right;
+        }
+
+        .image-shape-control {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        @media (max-width: 800px) {
+            .editor-section {
+                flex-direction: column;
+            }
+            
+            .controls {
+                flex: none;
+                width: auto;
+            }
+            
+            .preview {
+                width: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>賀卡編輯器<br>Greeting Card Editor</h1>
+
+
+    <button class="btn" onclick="downloadJPG()">下載 JPG</button>
+    <button class="btn" onclick="downloadGIF()">下載 GIF</button>
+ 
+        
+        <div class="editor-section">
+            <div class="controls">
+                <div class="form-group">
+                    <label>上傳賀卡背景</label>
+                    <input type="file" id="cardImage" accept="image/jpeg,image/jpg,image/gif" onchange="loadCardImage()">
+                </div>
+
+                <div class="form-group">
+                    <label>文字大小</label>
+                    <input type="range" id="fontSize" min="30" max="60" value="45" onchange="updateCard()">
+                </div>
+
+                <div class="form-group">
+                    <label>粗體文字</label>
+                    <input type="radio" id="boldText" onchange="updateCard()">
+                </div>
+
+                <div class="tab-container">
+                    <button class="tab-button active" onclick="switchTab('recipient')">收件人</button>
+                    <button class="tab-button" onclick="switchTab('sender')">寄件人</button>
+                </div>
+
+                <div id="recipientControls" style= font-family: Fahkwang Bold,>
+                    <div class="form-group">
+                        <label>收件人名稱</label>
+                        <input type="text" id="recipient" onchange="updateCard()">
+                    </div>
+
+                    <div class="form-group">
+                        <label>文字顏色</label>
+                        <input type="color" id="recipientColor" value="#f8cf8e" onchange="updateCard()">
+                    </div>
+
+                    <div class="form-group">
+                        <label>位置(左右): <span id="recipientXValue">50</span></label>
+                        <input type="range" id="recipientX" min="0" max="1200" value="50" oninput="updateSliderValue(this, 'recipientXValue'); updateCard();">
+                    </div>
+
+                    <div class="form-group">
+                        <label>位置(上下): <span id="recipientYValue">100</span></label>
+                        <input type="range" id="recipientY" min="0" max="2000" value="100" oninput="updateSliderValue(this, 'recipientYValue'); updateCard();">
+                    </div>
+                </div>
+
+                <div id="senderControls" style= font-family: Fahkwang Bold,  "display: none;">
+                    <div class="form-group">
+                        <label>寄件人名稱</label>
+                        <input type="text" id="sender" onchange="updateCard()">
+                    </div>
+
+                    <div class="form-group">
+                        <label>文字顏色</label>
+                        <input type="color" id="senderColor" value="#f8cf8e" onchange="updateCard()">
+                    </div>
+
+                    <div class="form-group">
+                        <label>位置(左右): <span id="senderXValue">50</span></label>
+                        <input type="range" id="senderX" min="0" max="1200" value="50" oninput="updateSliderValue(this, 'senderXValue'); updateCard();">
+                    </div>
+
+                    <div class="form-group">
+                        <label>位置(上下): <span id="senderYValue">100</span></label>
+                        <input type="range" id="senderY" min="0" max="2000" value="100" oninput="updateSliderValue(this, 'senderYValue'); updateCard();">
+                    </div>
+                </div>
+            </div>
+            
+                <br>
+
+                <div class="form-group">
+                    <label>上傳寄件人照片</label>
+                    <input type="file" id="senderImage" accept="image/*" onchange="loadSenderImage()">
+                    <img id="senderImagePreview">
+                </div>
+
+                <div class="form-group">
+                    <div class="image-shape-control">
+                        <input type="radio" id="squareShape" name="imageShape" value="square" checked onchange="updateCard()">
+                        <label for="squareShape">方形</label>
+                        <input type="radio" id="circleShape" name="imageShape" value="circle" onchange="updateCard()">
+                        <label for="circleShape">圓形</label>
+                    </div>
+                </div>
+            
+                <div class="form-group">
+                    <label>照片大小: <span id="imageSizeValue">100</span>px</label>
+                    <input type="range" id="imageSize" min="50" max="300" value="100" oninput="updateSliderValue(this, 'imageSizeValue'); updateCard();">
+                </div>
+
+                <div class="form-group">
+                    <label>位置(左右): <span id="senderImageXValue">50</span></label>
+                    <input type="range" id="senderImageX" min="0" max="1200" value="50" oninput="updateSliderValue(this, 'senderImageXValue'); updateCard();">
+                </div>
+
+                <div class="form-group">
+                    <label>位置(上下): <span id="senderImageYValue">400</span></label>
+                    <input type="range" id="senderImageY" min="0" max="2000" value="400" oninput="updateSliderValue(this, 'senderImageYValue'); updateCard();">
+                </div>
+            </div>
+
+            <div class="preview">
+                <canvas id="canvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let cardImg = new Image();
+        let senderImg = new Image();
+
+        function updateSliderValue(slider, valueId) {
+            document.getElementById(valueId).textContent = slider.value;
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-button').forEach(button => button.classList.remove('active'));
+            document.querySelector(`button[onclick="switchTab('${tab}')"]`).classList.add('active');
+            
+            if (tab === 'recipient') {
+                document.getElementById('recipientControls').style.display = 'block';
+                document.getElementById('senderControls').style.display = 'none';
+            } else {
+                document.getElementById('recipientControls').style.display = 'none';
+                document.getElementById('senderControls').style.display = 'block';
+            }
+        }
+
+        function loadCardImage() {
+            const file = document.getElementById('cardImage').files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    cardImg.onload = function() {
+                        canvas.width = cardImg.width;
+                        canvas.height = cardImg.height;
+                        updateCard();
+                    }
+                    cardImg.src = e.target.result;
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+        const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/gif'];
+    
+    if (file && allowedTypes.includes(file.type)) {
+        if (file.type === 'image/gif') {
+            
+            const gifPreview = document.createElement('img');
+            gifPreview.src = URL.createObjectURL(file);
+            gifPreview.onload = () => {
+                setBackgroundImage(gifPreview.src);
+               
+                URL.revokeObjectURL(gifPreview.src);
+            };
+        } else {
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                setBackgroundImage(e.target.result);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function loadSenderImage() {
+            const file = document.getElementById('senderImage').files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    senderImg.onload = function() {
+                        document.getElementById('senderImagePreview').src = e.target.result;
+                        updateCard();
+                    }
+                    senderImg.src = e.target.result;
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function drawCircularImage(img, x, y, size) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(x + size/2, y + size/2, size/2, 0, Math.PI * 2, true);
+            ctx.closePath();
+            ctx.clip();
+            ctx.drawImage(img, x, y, size, size);
+            ctx.restore();
+        }
+
+        function updateCard() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (cardImg.src) {
+                ctx.drawImage(cardImg, 0, 0);
+            }
+
+            if (bgImg.src.includes('gif')) {
+                setTimeout(() => drawCard(), 50); 
+            }
+
+            const fontSize = document.getElementById('fontSize').value;
+            const isBold = document.getElementById('boldText').checked;
+            ctx.font = `${isBold ? 'bold' : ''} ${fontSize}px "Microsoft JhengHei"`;
+
+            const recipient = document.getElementById('recipient').value;
+            const recipientX = parseInt(document.getElementById('recipientX').value);
+            const recipientY = parseInt(document.getElementById('recipientY').value);
+            ctx.fillStyle = document.getElementById('recipientColor').value;
+            ctx.fillText(recipient, recipientX, recipientY);
+
+            const sender = document.getElementById('sender').value;
+            const senderX = parseInt(document.getElementById('senderX').value);
+            const senderY = parseInt(document.getElementById('senderY').value);
+            ctx.fillStyle = document.getElementById('senderColor').value;
+            ctx.fillText(sender, senderX, senderY);
+
+            if (senderImg.src) {
+                const imgX = parseInt(document.getElementById('senderImageX').value);
+                const imgY = parseInt(document.getElementById('senderImageY').value);
+                const size = parseInt(document.getElementById('imageSize').value);
+                const isCircle = document.getElementById('circleShape').checked;
+
+                if (isCircle) {
+                    drawCircularImage(senderImg, imgX, imgY, size);
+                } else {
+                    ctx.drawImage(senderImg, imgX, imgY, size, size);
+                }
+            }
+        }
+
+function downloadImage(format) {
+    const link = document.createElement('a');
+    const filename = `Card.${format.toLowerCase()}`;
+    const mimeType = format.toLowerCase() === 'gif' ? 'image/gif' : 'image/jpeg';
+    
+    link.download = filename;
+    link.href = canvas.toDataURL(mimeType, 1.0);
+    link.click();
+}
+    </script>
+</body>
+</html>
